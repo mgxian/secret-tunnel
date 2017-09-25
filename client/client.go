@@ -6,8 +6,6 @@ import (
 	"io"
 	"net"
 	"sync"
-
-	"github.com/maogx8/secret-tunnel/common"
 )
 
 var (
