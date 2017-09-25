@@ -11,7 +11,7 @@ import (
 var (
 	// KEY 加密的密钥
 	KEY    = "123456"
-	SERVER = "127.0.0.1:1026"
+	SERVER = "47.52.79.208:1026"
 )
 
 func handle(conn net.Conn) {
@@ -22,21 +22,17 @@ func handle(conn net.Conn) {
 		return
 	}
 
-	// remoteWriter, err := common.NewsecretWriter(remote, KEY)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
+	remoteWriter, err := common.NewSecretWriter(remote, KEY)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	remoteWriter := bufio.NewWriter(remote)
-
-	// remoteReader, err := common.NewsecretReader(remote, KEY)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	remoteReader := bufio.NewReader(remote)
+	remoteReader, err := common.NewSecretReader(remote, KEY)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	defer remote.Close()
 	defer conn.Close()
@@ -49,11 +45,13 @@ func handle(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		io.Copy(remoteWriter, clientReader)
+		conn.Close()
 	}()
 
 	go func() {
 		defer wg.Done()
 		io.Copy(clientWriter, remoteReader)
+		remote.Close()
 	}()
 
 	wg.Wait()
