@@ -6,8 +6,6 @@ import (
 	"io"
 	"net"
 	"sync"
-
-	"github.com/maogx8/secret-tunnel/common"
 )
 
 var (
@@ -24,17 +22,21 @@ func handle(conn net.Conn) {
 		return
 	}
 
-	clientWriter, err := common.NewsecretWriter(conn, KEY)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	//clientWriter, err := common.NewsecretWriter(conn, KEY)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
 
-	clientReader, err := common.NewsecretReader(conn, KEY)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	clientWriter := bufio.NewWriter(conn)
+
+	// clientReader, err := common.NewsecretReader(conn, KEY)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	return
+	// }
+
+	clientReader := bufio.NewReader(conn)
 
 	defer proxy.Close()
 	defer conn.Close()
