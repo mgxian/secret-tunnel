@@ -13,7 +13,7 @@ import (
 var (
 	// KEY 加密的密钥
 	KEY    = "123456"
-	SERVER = "127.0.0.1:1026"
+	SERVER = "47.52.79.208:1026"
 )
 
 func handle(conn net.Conn) {
@@ -24,13 +24,13 @@ func handle(conn net.Conn) {
 		return
 	}
 
-	remoteWriter, err := common.NewsecretWriter(remote, KEY)
+	remoteWriter, err := common.NewSecretWriter(remote, KEY)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	remoteReader, err := common.NewsecretReader(remote, KEY)
+	remoteReader, err := common.NewSecretReader(remote, KEY)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -47,11 +47,13 @@ func handle(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		io.Copy(remoteWriter, clientReader)
+		conn.Close()
 	}()
 
 	go func() {
 		defer wg.Done()
 		io.Copy(clientWriter, remoteReader)
+		remote.Close()
 	}()
 
 	wg.Wait()
