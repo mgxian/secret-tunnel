@@ -30,11 +30,11 @@ func NewParameter(host, port, remote, server, key string, serverMode bool) (*Par
 }
 
 func handleParameter() (*Parameter, error) {
-	key := flag.String("k", "will", "encrypt string defualt 'will'")
+	key := flag.String("k", "will", "encrypt string")
 	host := flag.String("h", "", "listen address defualt '0.0.0.0'")
-	port := flag.String("p", "1026", "listen port default '1025'")
-	remote := flag.String("r", "127.0.0.1:1025", "remote address default '127.0.0.1:1025'")
-	server := flag.String("s", "127.0.0.1:1026", "secret-tunnel-server address default '127.0.0.1:1026'")
+	port := flag.String("p", "1026", "listen port")
+	remote := flag.String("r", "127.0.0.1:1025", "remote address for proxy")
+	server := flag.String("s", "127.0.0.1:1026", "secret-tunnel-server address")
 	serverMode := flag.Bool("server", false, "secret-tunnel start on server mode default true")
 
 	flag.Parse()
