@@ -1,111 +1,54 @@
 package main
 
 import (
-	"bufio"
-	"crypto/md5"
-	"crypto/rc4"
-	"errors"
-	"fmt"
-	"io"
-	"net"
+	"flag"
+
+	"github.com/maogx8/secret-tunnel/client"
+	"github.com/maogx8/secret-tunnel/server"
 )
 
-var (
-	// KEY 加密的密钥
-	KEY = "123456"
-)
-
-type secretReader struct {
-	r      *bufio.Reader
-	cipher *rc4.Cipher
+// Parameter 存储命令行参数的struct
+type Parameter struct {
+	host       string
+	port       string
+	remote     string
+	server     string
+	key        string
+	serverMode bool
 }
 
-type secretWriter struct {
-	w      *bufio.Writer
-	cipher *rc4.Cipher
-}
-
-// NewsecretReader 创建加密读
-func NewsecretReader(r io.Reader) (*secretReader, error) {
-	md5Byte := md5.New().Sum([]byte(KEY))
-	cipher, err := rc4.NewCipher(md5Byte)
-	if err != nil {
-		fmt.Println(err)
-		return nil, errors.New("create cipher fail")
-	}
-
-	return &secretReader{
-		r:      bufio.NewReader(r),
-		cipher: cipher,
+// NewParameter 创建存储命令行参数的struct
+func NewParameter(host, port, remote, server, key string, serverMode bool) (*Parameter, error) {
+	return &Parameter{
+		host:       host,
+		port:       port,
+		remote:     remote,
+		server:     server,
+		key:        key,
+		serverMode: serverMode,
 	}, nil
 }
 
-// NewsecretWriter 创建加密写
-func NewsecretWriter(w io.Writer) (*secretWriter, error) {
-	md5Byte := md5.New().Sum([]byte(KEY))
-	cipher, err := rc4.NewCipher(md5Byte)
-	if err != nil {
-		fmt.Println(err)
-		return nil, errors.New("create cipher fail")
-	}
-	return &secretWriter{
-		w:      bufio.NewWriter(w),
-		cipher: cipher,
-	}, nil
-}
+func handleParameter() (*Parameter, error) {
+	key := flag.String("k", "will", "encrypt string defualt 'will'")
+	host := flag.String("h", "", "listen address defualt '0.0.0.0'")
+	port := flag.String("p", "1026", "listen port default '1025'")
+	remote := flag.String("r", "127.0.0.1:1025", "remote address default '127.0.0.1:1025'")
+	server := flag.String("s", "127.0.0.1:1026", "secret-tunnel-server address default '127.0.0.1:1026'")
+	serverMode := flag.Bool("server", false, "secret-tunnel start on server mode default true")
 
-func (r *secretReader) Read(b []byte) (n int, err error) {
-	n, err = r.r.Read(b)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	r.cipher.XORKeyStream(b, b)
-	return
-}
+	flag.Parse()
 
-func (w *secretWriter) Write(p []byte) (n int, err error) {
-	w.cipher.XORKeyStream(p, p)
-	n, err = w.w.Write(p)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	w.w.Flush()
-	return
-}
-
-func handle(conn net.Conn) {
-	reader, err := NewsecretReader(conn)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	p := make([]byte, 1024)
-	n, err := reader.Read(p)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println(string(p[:n]))
-	return
+	return NewParameter(*host, *port, *remote, *server, *key, *serverMode)
 }
 
 func main() {
-	listen, err := net.Listen("tcp", ":1026")
-	if err != nil {
-		fmt.Println(err)
-		panic("listen error")
+	p, _ := handleParameter()
+
+	listenAddress := p.host + ":" + p.port
+	if p.serverMode {
+		server.Run(listenAddress, p.key, p.remote)
 	}
 
-	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		go handle(conn)
-	}
+	client.Run(listenAddress, p.key, p.server)
 }

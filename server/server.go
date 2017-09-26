@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bufio"
@@ -10,16 +10,10 @@ import (
 	"github.com/maogx8/secret-tunnel/common"
 )
 
-var (
-	// KEY 加密的密钥
-	KEY    = "123456"
-	SERVER = "127.0.0.1:1025"
-)
-
-func handle(conn net.Conn) {
+func handle(conn net.Conn, key, remote string) {
 	defer conn.Close()
 	fmt.Println("secret-tunnel-server: got a client from ", conn.RemoteAddr().String())
-	proxy, err := net.Dial("tcp", SERVER)
+	proxy, err := net.Dial("tcp", remote)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -27,13 +21,13 @@ func handle(conn net.Conn) {
 
 	defer proxy.Close()
 
-	clientWriter, err := common.NewSecretWriter(conn, KEY)
+	clientWriter, err := common.NewSecretWriter(conn, key)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	clientReader, err := common.NewSecretReader(conn, KEY)
+	clientReader, err := common.NewSecretReader(conn, key)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -47,23 +41,29 @@ func handle(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		io.Copy(proxyWriter, clientReader)
+		proxy.Close()
+		fmt.Println("client say bye bye")
 	}()
 
 	go func() {
 		defer wg.Done()
 		io.Copy(clientWriter, proxyReader)
+		conn.Close()
+		fmt.Println("proxy say bye bye")
 	}()
 
 	wg.Wait()
 }
 
-func main() {
-	listen, err := net.Listen("tcp", ":1026")
+// Run 启动服务端
+func Run(listenAddress, key, remote string) {
+	listen, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		fmt.Println(err)
-		panic("listen error")
+		return
 	}
 
+	fmt.Println("secret-tunnel-server listening on", listenAddress)
 	defer listen.Close()
 
 	for {
@@ -72,6 +72,6 @@ func main() {
 			fmt.Println(err)
 			continue
 		}
-		go handle(conn)
+		go handle(conn, key, remote)
 	}
 }
