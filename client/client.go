@@ -6,21 +6,26 @@ import (
 	"io"
 	"net"
 	"sync"
+
+	"github.com/maogx8/secret-tunnel/common"
 )
 
 var (
 	// KEY 加密的密钥
 	KEY    = "123456"
-	SERVER = "47.52.79.208:1026"
+	SERVER = "127.0.0.1:1026"
 )
 
 func handle(conn net.Conn) {
-	fmt.Println("client: got a client")
+	defer conn.Close()
+	fmt.Println("secret-tunnel-client: got a client from ", conn.RemoteAddr().String())
 	remote, err := net.Dial("tcp", SERVER)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
+	defer remote.Close()
 
 	remoteWriter, err := common.NewSecretWriter(remote, KEY)
 	if err != nil {
@@ -34,9 +39,6 @@ func handle(conn net.Conn) {
 		return
 	}
 
-	defer remote.Close()
-	defer conn.Close()
-
 	clientReader := bufio.NewReader(conn)
 	clientWriter := bufio.NewWriter(conn)
 
@@ -45,13 +47,11 @@ func handle(conn net.Conn) {
 	go func() {
 		defer wg.Done()
 		io.Copy(remoteWriter, clientReader)
-		conn.Close()
 	}()
 
 	go func() {
 		defer wg.Done()
 		io.Copy(clientWriter, remoteReader)
-		remote.Close()
 	}()
 
 	wg.Wait()
@@ -63,6 +63,8 @@ func main() {
 		fmt.Println(err)
 		panic("listen error")
 	}
+
+	defer listen.Close()
 
 	for {
 		conn, err := listen.Accept()

@@ -6,6 +6,8 @@ import (
 	"io"
 	"net"
 	"sync"
+
+	"github.com/maogx8/secret-tunnel/common"
 )
 
 var (
@@ -15,31 +17,27 @@ var (
 )
 
 func handle(conn net.Conn) {
-	fmt.Println("server: got a client")
+	defer conn.Close()
+	fmt.Println("secret-tunnel-server: got a client from ", conn.RemoteAddr().String())
 	proxy, err := net.Dial("tcp", SERVER)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	//clientWriter, err := common.NewsecretWriter(conn, KEY)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	clientWriter := bufio.NewWriter(conn)
-
-	// clientReader, err := common.NewsecretReader(conn, KEY)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-
-	clientReader := bufio.NewReader(conn)
-
 	defer proxy.Close()
-	defer conn.Close()
+
+	clientWriter, err := common.NewSecretWriter(conn, KEY)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	clientReader, err := common.NewSecretReader(conn, KEY)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	proxyReader := bufio.NewReader(proxy)
 	proxyWriter := bufio.NewWriter(proxy)
@@ -65,6 +63,8 @@ func main() {
 		fmt.Println(err)
 		panic("listen error")
 	}
+
+	defer listen.Close()
 
 	for {
 		conn, err := listen.Accept()

@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"crypto/md5"
 	"crypto/rc4"
 	"errors"
@@ -9,18 +8,20 @@ import (
 	"io"
 )
 
-type secretReader struct {
-	r      *bufio.Reader
+// SecretReader 加密读
+type SecretReader struct {
+	r      io.Reader
 	cipher *rc4.Cipher
 }
 
-type secretWriter struct {
-	w      *bufio.Writer
+// SecretWriter 加密写
+type SecretWriter struct {
+	w      io.Writer
 	cipher *rc4.Cipher
 }
 
-// NewsecretReader 创建加密读
-func NewsecretReader(r io.Reader, key string) (*secretReader, error) {
+// NewSecretReader 创建加密读
+func NewSecretReader(r io.Reader, key string) (*SecretReader, error) {
 	md5Byte := md5.New().Sum([]byte(key))
 	cipher, err := rc4.NewCipher(md5Byte)
 	if err != nil {
@@ -28,43 +29,42 @@ func NewsecretReader(r io.Reader, key string) (*secretReader, error) {
 		return nil, errors.New("create cipher fail")
 	}
 
-	return &secretReader{
-		r:      bufio.NewReader(r),
+	return &SecretReader{
+		r:      r,
 		cipher: cipher,
 	}, nil
 }
 
-// NewsecretWriter 创建加密写
-func NewsecretWriter(w io.Writer, key string) (*secretWriter, error) {
+// NewSecretWriter 创建加密写
+func NewSecretWriter(w io.Writer, key string) (*SecretWriter, error) {
 	md5Byte := md5.New().Sum([]byte(key))
 	cipher, err := rc4.NewCipher(md5Byte)
 	if err != nil {
 		fmt.Println(err)
 		return nil, errors.New("create cipher fail")
 	}
-	return &secretWriter{
-		w:      bufio.NewWriter(w),
+	return &SecretWriter{
+		w:      w,
 		cipher: cipher,
 	}, nil
 }
 
-func (r *secretReader) Read(b []byte) (n int, err error) {
+func (r *SecretReader) Read(b []byte) (n int, err error) {
 	n, err = r.r.Read(b)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	r.cipher.XORKeyStream(b, b)
+	r.cipher.XORKeyStream(b, b[:n])
 	return
 }
 
-func (w *secretWriter) Write(p []byte) (n int, err error) {
+func (w *SecretWriter) Write(p []byte) (n int, err error) {
 	w.cipher.XORKeyStream(p, p)
 	n, err = w.w.Write(p)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	w.w.Flush()
 	return
 }
