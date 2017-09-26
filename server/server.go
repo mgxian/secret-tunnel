@@ -55,7 +55,7 @@ func handle(conn net.Conn, key, remote string) {
 	wg.Wait()
 }
 
-// Run 启动服务端
+// Run start secret-tunnel server
 func Run(listenAddress, key, remote string) {
 	listen, err := net.Listen("tcp", listenAddress)
 	if err != nil {
